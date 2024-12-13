@@ -3,44 +3,45 @@ import { CommonModule } from '@angular/common';
 import { MatCardModule } from '@angular/material/card';
 import { MatGridListModule } from '@angular/material/grid-list';
 import { MatIconModule } from '@angular/material/icon';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Chart } from 'chart.js/auto';
 import { AuthService } from '../../services/auth.service';
+import { catchError } from 'rxjs/operators';
+import { of } from 'rxjs';
 
 @Component({
   selector: 'app-dashboard',
   standalone: true,
   imports: [CommonModule, MatCardModule, MatGridListModule, MatIconModule],
   template: `
-  <div class="dashboard-container" *ngIf="loaded">
-    <div class="stats-grid">
-      <mat-card class="stat-card">
-        <mat-card-content>
-          <div class="stat-content">
-            <mat-icon color="primary">inventory_2</mat-icon>
-            <div class="stat-details">
-              <h3>Total Inventory</h3>
-              <p class="stat-number">{{metrics?.total_inventory}}</p>
+    <div class="dashboard-container" *ngIf="loaded">
+      <div class="stats-grid">
+        <mat-card class="stat-card">
+          <mat-card-content>
+            <div class="stat-content">
+              <mat-icon color="primary">inventory_2</mat-icon>
+              <div class="stat-details">
+                <h3>Total Inventory</h3>
+                <p class="stat-number">{{metrics?.total_inventory || 0}}</p>
+              </div>
             </div>
-          </div>
-        </mat-card-content>
-      </mat-card>
+          </mat-card-content>
+        </mat-card>
 
-      <mat-card class="stat-card">
-        <mat-card-content>
-          <div class="stat-content">
-            <mat-icon color="warn">warning</mat-icon>
-            <div class="stat-details">
-              <h3>Low Stock Items</h3>
-              <p class="stat-number">{{metrics?.low_stock_items}}</p>
+        <mat-card class="stat-card">
+          <mat-card-content>
+            <div class="stat-content">
+              <mat-icon color="warn">warning</mat-icon>
+              <div class="stat-details">
+                <h3>Low Stock Items</h3>
+                <p class="stat-number">{{metrics?.low_stock_items || 0}}</p>
+              </div>
             </div>
-          </div>
-        </mat-card-content>
-      </mat-card>
+          </mat-card-content>
+        </mat-card>
+      </div>
+      <canvas id="inventoryChart"></canvas>
     </div>
-    <!-- Add charts or more cards for seasonal distribution, supplier performance, disposal compliance as needed -->
-    <canvas id="inventoryChart"></canvas>
-  </div>
   `,
   styles: [`
     .dashboard-container {
@@ -80,24 +81,70 @@ export class DashboardComponent implements OnInit {
   constructor(private http: HttpClient, private authService: AuthService) {}
 
   ngOnInit() {
-    // Fetch dashboard metrics
-    this.http.get<any>('http://localhost:8000/api/analytics/dashboard-metrics')
+    this.loadMetrics();
+  }
+
+  private getHeaders(): HttpHeaders {
+    const token = this.authService.getToken();
+    return new HttpHeaders({
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    });
+  }
+
+  private loadMetrics() {
+    const headers = this.getHeaders();
+    
+    this.http.get<any>('http://localhost:8000/api/analytics/dashboard-metrics', { headers })
+      .pipe(
+        catchError(error => {
+          console.error('Error loading metrics:', error);
+          return of({ total_inventory: 0, low_stock_items: 0, seasonal_distribution: {} });
+        })
+      )
       .subscribe({
         next: (data) => {
           this.metrics = data;
           this.loaded = true;
-          this.initializeInventoryChart();
+          if (data.seasonal_distribution) {
+            this.initializeInventoryChart();
+          }
         },
-        error: (err) => console.error(err)
+        error: (err) => {
+          console.error('Error in metrics subscription:', err);
+          this.loaded = true;
+          this.metrics = { total_inventory: 0, low_stock_items: 0 };
+        }
+      });
+  }
+
+  generateDummyData() {
+    const headers = this.getHeaders();
+    
+    this.http.post('http://localhost:8000/api/dummy/generate-dummy-data', {}, { headers })
+      .pipe(
+        catchError(error => {
+          console.error('Error generating dummy data:', error);
+          return of(null);
+        })
+      )
+      .subscribe({
+        next: () => this.loadMetrics(),
+        error: (err) => console.error('Error in dummy data subscription:', err)
       });
   }
 
   private initializeInventoryChart() {
-    const ctx = document.getElementById('inventoryChart') as HTMLCanvasElement;
+    const canvas = document.getElementById('inventoryChart') as HTMLCanvasElement;
+    if (!canvas) {
+      console.warn('Canvas element not found, skipping chart initialization');
+      return;
+    }
+
     const labels = Object.keys(this.metrics.seasonal_distribution);
     const values = Object.values(this.metrics.seasonal_distribution);
 
-    new Chart(ctx, {
+    new Chart(canvas, {
       type: 'doughnut',
       data: {
         labels,
@@ -113,24 +160,4 @@ export class DashboardComponent implements OnInit {
       }
     });
   }
-
-  generateDummyData() {
-    this.http.post('http://localhost:8000/api/dummy/generate-dummy-data', {}, {headers: {Authorization: 'Bearer ' + this.authService.getToken()}})
-      .subscribe({
-        next: () => this.loadMetrics(),
-        error: (err) => console.error(err)
-      });
-  }
-  
-  private loadMetrics() {
-    this.http.get<any>('http://localhost:8000/api/analytics/dashboard-metrics')
-      .subscribe({
-        next: (data) => {
-          this.metrics = data;
-          this.loaded = true;
-          this.initializeInventoryChart();
-        },
-        error: (err) => console.error(err)
-      });
-    }
 }

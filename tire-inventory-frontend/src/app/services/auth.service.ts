@@ -18,10 +18,11 @@ export class AuthService {
     private http: HttpClient,
     @Inject(PLATFORM_ID) private platformId: Object
   ) {
-    this.isBrowser = isPlatformBrowser(this.platformId);
+    this.isBrowser = isPlatformBrowser(platformId);
     if (this.isBrowser) {
+      const token = localStorage.getItem('token');
       const storedUser = localStorage.getItem('currentUser');
-      if (storedUser) {
+      if (token && storedUser) {
         try {
           this.currentUserSubject.next(JSON.parse(storedUser));
         } catch {
@@ -32,29 +33,33 @@ export class AuthService {
   }
 
   login(credentials: { username: string; password: string }): Observable<any> {
-    return this.http.post<{ user: User; token: string }>(`${this.apiUrl}/login`, credentials)
-      .pipe(
-        tap(response => {
-          if (this.isBrowser && response?.token) {
-            localStorage.setItem('token', response.token);
-            localStorage.setItem('currentUser', JSON.stringify(response.user));
-            this.currentUserSubject.next(response.user);
-          }
-        })
-      );
+    const formData = new URLSearchParams();
+    formData.set('username', credentials.username);
+    formData.set('password', credentials.password);
+
+    return this.http.post<any>(`${this.apiUrl}/login`, formData.toString(), {
+      headers: new HttpHeaders().set('Content-Type', 'application/x-www-form-urlencoded')
+    }).pipe(
+      tap(response => {
+        if (this.isBrowser && response.token) {
+          localStorage.setItem('token', response.token);
+          localStorage.setItem('currentUser', JSON.stringify(response.user));
+          this.currentUserSubject.next(response.user);
+        }
+      })
+    );
   }
 
   register(user: User): Observable<any> {
-    return this.http.post<{ user: User; token: string }>(`${this.apiUrl}/register`, user)
-      .pipe(
-        tap(response => {
-          if (this.isBrowser && response?.token) {
-            localStorage.setItem('token', response.token);
-            localStorage.setItem('currentUser', JSON.stringify(response.user));
-            this.currentUserSubject.next(response.user);
-          }
-        })
-      );
+    return this.http.post<any>(`${this.apiUrl}/register`, user).pipe(
+      tap(response => {
+        if (this.isBrowser && response.token) {
+          localStorage.setItem('token', response.token);
+          localStorage.setItem('currentUser', JSON.stringify(response.user));
+          this.currentUserSubject.next(response.user);
+        }
+      })
+    );
   }
 
   logout(): void {
@@ -66,21 +71,14 @@ export class AuthService {
   }
 
   getToken(): string | null {
-    if (!this.isBrowser) return null;
-    return localStorage.getItem('token');
+    return this.isBrowser ? localStorage.getItem('token') : null;
   }
 
   isLoggedIn(): boolean {
-    if (!this.isBrowser) return false;
     return !!this.getToken();
   }
 
   getCurrentUser(): User | null {
     return this.currentUserSubject.value;
-  }
-
-  getAuthorizationHeaders(): HttpHeaders {
-    const token = this.getToken();
-    return new HttpHeaders().set('Authorization', `Bearer ${token}`);
   }
 }

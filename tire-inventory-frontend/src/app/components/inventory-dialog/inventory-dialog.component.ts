@@ -43,27 +43,68 @@ import { debounceTime, switchMap, tap } from 'rxjs/operators';
 
           <mat-form-field>
             <mat-label>Model</mat-label>
-            <input matInput formControlName="model" 
-                   (input)="onModelInput()"
-                   [matAutocomplete]="modelAuto">
-            <mat-autocomplete #modelAuto="matAutocomplete">
-              <mat-option *ngFor="let spec of tireSpecs" 
-                         [value]="spec.model"
-                         (click)="autoFillSpec(spec)">
-                {{spec.model}}
-              </mat-option>
-            </mat-autocomplete>
-            <mat-spinner *ngIf="loading" diameter="20"></mat-spinner>
+            <input matInput formControlName="model">
           </mat-form-field>
         </div>
 
-        <!-- Rest of your form fields -->
+        <div class="form-row">
+          <mat-form-field>
+            <mat-label>Size</mat-label>
+            <input matInput formControlName="size" placeholder="225/45R17">
+          </mat-form-field>
+
+          <mat-form-field>
+            <mat-label>Type</mat-label>
+            <mat-select formControlName="type">
+              <mat-option value="All Season">All Season</mat-option>
+              <mat-option value="Summer">Summer</mat-option>
+              <mat-option value="Winter">Winter</mat-option>
+              <mat-option value="Performance">Performance</mat-option>
+            </mat-select>
+          </mat-form-field>
+        </div>
+
+        <div class="form-row">
+          <mat-form-field>
+            <mat-label>Speed Rating</mat-label>
+            <input matInput formControlName="speedRating">
+          </mat-form-field>
+
+          <mat-form-field>
+            <mat-label>Load Index</mat-label>
+            <input matInput formControlName="loadIndex">
+          </mat-form-field>
+        </div>
+
+        <div class="form-row">
+          <mat-form-field>
+            <mat-label>Quantity</mat-label>
+            <input matInput type="number" formControlName="quantity">
+          </mat-form-field>
+
+          <mat-form-field>
+            <mat-label>Price</mat-label>
+            <input matInput type="number" formControlName="price">
+          </mat-form-field>
+        </div>
+
+        <div class="form-row">
+          <mat-form-field>
+            <mat-label>Location</mat-label>
+            <input matInput formControlName="location">
+          </mat-form-field>
+
+          <mat-form-field>
+            <mat-label>Minimum Stock</mat-label>
+            <input matInput type="number" formControlName="minimumStock">
+          </mat-form-field>
+        </div>
       </form>
     </div>
     <div mat-dialog-actions align="end">
       <button mat-button (click)="onCancel()">Cancel</button>
       <button mat-raised-button color="primary" 
-              [disabled]="itemForm.invalid || loading"
+              [disabled]="itemForm.invalid"
               (click)="onSave()">
         Save
       </button>
@@ -88,7 +129,6 @@ import { debounceTime, switchMap, tap } from 'rxjs/operators';
 export class InventoryDialogComponent implements OnInit {
   itemForm: FormGroup;
   popularBrands: string[] = [];
-  tireSpecs: any[] = [];
   loading = false;
 
   constructor(
@@ -103,14 +143,19 @@ export class InventoryDialogComponent implements OnInit {
   ngOnInit() {
     this.popularBrands = this.tireDataService.getPopularBrands();
     
+    // Auto-fill specifications when brand and model are entered
+    this.itemForm.get('brand')?.valueChanges.pipe(
+      debounceTime(300)
+    ).subscribe(() => this.updateSpecifications());
+
     this.itemForm.get('model')?.valueChanges.pipe(
-      debounceTime(300),
-      tap(() => this.loading = true),
-      switchMap(value => this.tireDataService.searchTireSpecs(value))
-    ).subscribe(specs => {
-      this.tireSpecs = specs;
-      this.loading = false;
-    });
+      debounceTime(300)
+    ).subscribe(() => this.updateSpecifications());
+
+    // If editing, populate form with existing data
+    if (this.data) {
+      this.itemForm.patchValue(this.data);
+    }
   }
 
   private createForm(): FormGroup {
@@ -124,20 +169,11 @@ export class InventoryDialogComponent implements OnInit {
       quantity: [0, [Validators.required, Validators.min(0)]],
       price: [0, [Validators.required, Validators.min(0)]],
       location: ['', Validators.required],
-      minimumStock: [5, [Validators.required, Validators.min(0)]],
-      rimDiameter: [''],
-      sectionWidth: [''],
-      aspectRatio: [''],
-      construction: [''],
-      maxLoad: [''],
-      maxPressure: [''],
-      treadDepth: [''],
-      weight: [''],
-      notes: ['']
+      minimumStock: [5, [Validators.required, Validators.min(0)]]
     });
   }
 
-  onModelInput() {
+  private updateSpecifications() {
     const brand = this.itemForm.get('brand')?.value;
     const model = this.itemForm.get('model')?.value;
     
@@ -146,28 +182,16 @@ export class InventoryDialogComponent implements OnInit {
       this.tireDataService.getTireSpecification(brand, model)
         .subscribe(spec => {
           if (spec) {
-            this.autoFillSpec(spec);
+            this.itemForm.patchValue({
+              size: spec.size,
+              type: spec.type,
+              speedRating: spec.speedRating,
+              loadIndex: spec.loadIndex
+            });
           }
           this.loading = false;
         });
     }
-  }
-
-  autoFillSpec(spec: any) {
-    this.itemForm.patchValue({
-      size: spec.size,
-      type: spec.type,
-      speedRating: spec.speedRating,
-      loadIndex: spec.loadIndex,
-      rimDiameter: spec.rimDiameter,
-      sectionWidth: spec.sectionWidth,
-      aspectRatio: spec.aspectRatio,
-      construction: spec.construction,
-      maxLoad: spec.maxLoad,
-      maxPressure: spec.maxPressure,
-      treadDepth: spec.treadDepth,
-      weight: spec.weight
-    });
   }
 
   onCancel(): void {

@@ -1,56 +1,34 @@
-import { Injectable, Inject, PLATFORM_ID } from '@angular/core';
-import { 
-  HttpRequest, 
-  HttpHandler, 
-  HttpEvent, 
-  HttpInterceptor, 
-  HttpErrorResponse 
-} from '@angular/common/http';
-import { Observable, throwError } from 'rxjs';
-import { catchError } from 'rxjs/operators';
+import { HttpInterceptorFn } from '@angular/common/http';
+import { inject } from '@angular/core';
 import { AuthService } from '../services/auth.service';
-import { isPlatformBrowser } from '@angular/common';
 import { Router } from '@angular/router';
+import { catchError } from 'rxjs/operators';
+import { throwError } from 'rxjs';
 
-@Injectable()
-export class AuthInterceptor implements HttpInterceptor {
-  private isBrowser: boolean;
+export const authInterceptor: HttpInterceptorFn = (req, next) => {
+  const authService = inject(AuthService);
+  const router = inject(Router);
 
-  constructor(
-    private authService: AuthService,
-    private router: Router,
-    @Inject(PLATFORM_ID) private platformId: Object
-  ) {
-    this.isBrowser = isPlatformBrowser(this.platformId);
+  // Skip token for login/register endpoints
+  if (req.url.includes('/login') || req.url.includes('/register')) {
+    return next(req);
   }
 
-  intercept(request: HttpRequest<unknown>, next: HttpHandler): Observable<HttpEvent<unknown>> {
-    // Skip token for login/register endpoints
-    if (request.url.includes('/login') || request.url.includes('/register')) {
-      return next.handle(request);
-    }
-
-    let authReq = request;
-    if (this.isBrowser) {
-      const token = this.authService.getToken();
-      if (token) {
-        authReq = request.clone({
-          setHeaders: {
-            Authorization: `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          }
-        });
-      }
-    }
-
-    return next.handle(authReq).pipe(
-      catchError((error: HttpErrorResponse) => {
+  const token = authService.getToken();
+  if (token) {
+    const authReq = req.clone({
+      headers: req.headers.set('Authorization', `Bearer ${token}`)
+    });
+    return next(authReq).pipe(
+      catchError(error => {
         if (error.status === 401) {
-          this.authService.logout();
-          this.router.navigate(['/login']);
+          authService.logout();
+          router.navigate(['/login']);
         }
         return throwError(() => error);
       })
     );
   }
-}
+
+  return next(req);
+};

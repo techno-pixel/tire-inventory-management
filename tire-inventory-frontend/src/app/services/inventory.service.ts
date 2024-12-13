@@ -1,16 +1,112 @@
 import { Injectable } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { catchError, Observable, of } from 'rxjs';
 import { InventoryItem } from '../interfaces/inventory-item';
-import { environment } from '../../environments/environment'; // Import environment
+import { environment } from '../../environments/environment';
+import { AuthService } from './auth.service';
 
 @Injectable({
   providedIn: 'root'
 })
 export class InventoryService {
   private apiUrl = 'http://localhost:8000/api/inventory';
+  private openTireApiUrl = 'https://raw.githubusercontent.com/yourgithub/opentire/main/data/tires.json'; // Update with actual URL
 
-  // Mock data for initial testing
+  constructor(
+    private http: HttpClient,
+    private authService: AuthService
+  ) { }
+
+  private getHeaders(): HttpHeaders {
+    const token = this.authService.getToken();
+    return new HttpHeaders({
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    });
+  }
+
+  getItems(): Observable<InventoryItem[]> {
+    const headers = this.getHeaders();
+    
+    return this.http.get<InventoryItem[]>(this.apiUrl, { headers }).pipe(
+      catchError(err => {
+        console.warn('API unavailable, returning mock data:', err);
+        return of(this.mockInventory);
+      })
+    );
+  }
+
+  getItem(id: number): Observable<InventoryItem> {
+    const headers = this.getHeaders();
+    
+    return this.http.get<InventoryItem>(`${this.apiUrl}/${id}`, { headers }).pipe(
+      catchError(err => {
+        const item = this.mockInventory.find(i => i.id === id);
+        return of(item!);
+      })
+    );
+  }
+
+  addItem(item: InventoryItem): Observable<InventoryItem> {
+    const headers = this.getHeaders();
+    
+    return this.http.post<InventoryItem>(this.apiUrl, item, { headers }).pipe(
+      catchError((error) => {
+        console.error('Error adding item:', error);
+        // Add the item to mock inventory for testing
+        const newItem = { ...item, id: this.mockInventory.length + 1 };
+        this.mockInventory.push(newItem);
+        return of(newItem);
+      })
+    );
+  }
+
+  updateItem(id: number, item: InventoryItem): Observable<InventoryItem> {
+    const headers = this.getHeaders();
+    
+    return this.http.put<InventoryItem>(`${this.apiUrl}/${id}`, item, { headers }).pipe(
+      catchError(err => {
+        const index = this.mockInventory.findIndex(i => i.id === id);
+        if (index !== -1) {
+          this.mockInventory[index] = { ...item, id };
+          return of(this.mockInventory[index]);
+        }
+        return of(item);
+      })
+    );
+  }
+
+  deleteItem(id: number): Observable<void> {
+    const headers = this.getHeaders();
+    
+    return this.http.delete<void>(`${this.apiUrl}/${id}`, { headers }).pipe(
+      catchError(err => {
+        const index = this.mockInventory.findIndex(i => i.id === id);
+        if (index !== -1) {
+          this.mockInventory.splice(index, 1);
+        }
+        return of(void 0);
+      })
+    );
+  }
+
+  // Add a method to fetch from OpenTire API
+  fetchOpenTireData(): Observable<any> {
+    return this.http.get(this.openTireApiUrl).pipe(
+      catchError(error => {
+        console.error('Error fetching OpenTire data:', error);
+        return of([]);
+      })
+    );
+  }
+  private handleError<T>(result?: T): (error: any) => Observable<T> {
+    return (error: any): Observable<T> => {
+      console.error('API call failed:', error);
+      return of(result as T);
+    };
+  }
+
+  // Mock data for fallback
   private mockInventory: InventoryItem[] = [
     {
       id: 1,
@@ -53,59 +149,4 @@ export class InventoryService {
       manufactureDate: new Date("2023-11-15")
     }
   ];
-
-  constructor(private http: HttpClient) { }
-
-  getItems(): Observable<InventoryItem[]> {
-    return this.http.get<InventoryItem[]>(this.apiUrl).pipe(
-      catchError(err => {
-        console.warn('API unavailable, returning mock data');
-        return of(this.mockInventory);
-      })
-    );
-  }
-
-  getItem(id: number): Observable<InventoryItem> {
-    // For testing
-    // const item = this.mockInventory.find(i => i.id === id);
-    // return of(item!);
-    
-    // When backend is ready:
-    return this.http.get<InventoryItem>(`${this.apiUrl}/${id}`);
-  }
-
-  addItem(item: InventoryItem): Observable<InventoryItem> {
-    return this.http.post<InventoryItem>(this.apiUrl, item).pipe(
-      catchError((error) => {
-        console.error('Error adding item:', error);
-        return of(error);
-      })
-    );
-  }
-
-  updateItem(id: number, item: InventoryItem): Observable<InventoryItem> {
-    // For testing
-    // const index = this.mockInventory.findIndex(i => i.id === id);
-    // if (index !== -1) {
-    //   this.mockInventory[index] = { ...item, id };
-    //   return of(this.mockInventory[index]);
-    // }
-    // return of(item);
-    
-    // When backend is ready:
-    return this.http.put<InventoryItem>(`${this.apiUrl}/${id}`, item);
-  }
-
-  deleteItem(id: number): Observable<void> {
-    // For testing
-    // const index = this.mockInventory.findIndex(i => i.id === id);
-    // if (index !== -1) {
-    //   this.mockInventory.splice(index, 1);
-    // }
-    // return of(void 0);
-    
-    // When backend is ready:
-    return this.http.delete<void>(`${this.apiUrl}/${id}`);
-  }
 }
-

@@ -1,1 +1,52 @@
-<p>qr-generator works!</p>
+<!-- qr-generator.component.html -->
+<div class="container">
+  <!-- Left Side - QR Generator -->
+  <mat-card class="qr-card">
+    <mat-card-header>
+      <mat-card-title>Generate QR Code</mat-card-title>
+    </mat-card-header>
+    <mat-card-content>
+      <mat-form-field class="full-width">
+        <mat-label>Select Item</mat-label>
+        <mat-select [(ngModel)]="selectedItem" (selectionChange)="generateQRCode()">
+          <mat-option *ngFor="let item of inventoryItems" [value]="item">
+            {{item.brand}} {{item.model}} - {{item.size}}
+          </mat-option>
+        </mat-select>
+      </mat-form-field>
+
+      <div class="qr-display" *ngIf="qrDataUrl">
+        <img [src]="qrDataUrl" alt="QR Code" class="qr-code">
+        <button mat-raised-button color="primary" (click)="downloadQR()">
+          <mat-icon>download</mat-icon>
+          Download QR Code
+        </button>
+      </div>
+
+      <div class="item-details" *ngIf="selectedItem">
+        <h3>Selected Item Details</h3>
+        <p><strong>SKU:</strong> {{selectedItem.sku}}</p>
+        <p><strong>Brand:</strong> {{selectedItem.brand}}</p>
+        <p><strong>Model:</strong> {{selectedItem.model}}</p>
+        <p><strong>Size:</strong> {{selectedItem.size}}</p>
+      </div>
+    </mat-card-content>
+  </mat-card>
+
+  <!-- Right Side - QR Scanner -->
+  <mat-card class="scanner-card">
+    <mat-card-header>
+      <mat-card-title>Scan QR Code</mat-card-title>
+    </mat-card-header>
+    <mat-card-content>
+      <div class="scanner-container" *ngIf="isScanning">
+        <zxing-scanner
+          [enable]="isScanning"
+          (scanSuccess)="onScanSuccess($event)"
+          (camerasFound)="onCamerasFound($event)"
+          [device]="currentDevice">
+        </zxing-scanner>
+      </div>
+    </mat-card-content>
+  </mat-card>
+</div>

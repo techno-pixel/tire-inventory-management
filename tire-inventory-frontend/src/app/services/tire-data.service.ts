@@ -1,7 +1,8 @@
-import { Injectable } from '@angular/core';
+import { Injectable, Inject, PLATFORM_ID } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { BehaviorSubject, Observable, of } from 'rxjs';
 import { map, tap, catchError } from 'rxjs/operators';
+import { isPlatformBrowser } from '@angular/common';
 
 export interface TireSpecification {
   brand: string;
@@ -27,18 +28,47 @@ export class TireDataService {
   private tireSpecsCache = new BehaviorSubject<{[key: string]: TireSpecification}>({});
   private readonly GITHUB_API = 'https://api.github.com/repos/OpenTire/OpenTire/contents/data/specifications';
   private readonly CACHE_KEY = 'tire_specifications';
+  private isBrowser: boolean;
 
-  constructor(private http: HttpClient) {
+  // Default specifications for common tire types
+  private defaultSpecs: { [key: string]: Partial<TireSpecification> } = {
+    'all_season': {
+      type: 'All Season',
+      speedRating: 'H',
+      loadIndex: '94',
+      construction: 'Radial'
+    },
+    'summer': {
+      type: 'Summer',
+      speedRating: 'Y',
+      loadIndex: '95',
+      construction: 'Radial'
+    },
+    'winter': {
+      type: 'Winter',
+      speedRating: 'T',
+      loadIndex: '92',
+      construction: 'Radial'
+    }
+  };
+
+  constructor(
+    private http: HttpClient,
+    @Inject(PLATFORM_ID) private platformId: Object
+  ) {
+    this.isBrowser = isPlatformBrowser(platformId);
     this.loadFromCache();
   }
 
   private loadFromCache() {
-    const cached = localStorage.getItem(this.CACHE_KEY);
-    if (cached) {
-      try {
-        this.tireSpecsCache.next(JSON.parse(cached));
-      } catch (e) {
-        console.error('Error loading cached tire specs:', e);
+    if (this.isBrowser) {
+      const cached = localStorage.getItem(this.CACHE_KEY);
+      if (cached) {
+        try {
+          this.tireSpecsCache.next(JSON.parse(cached));
+        } catch (e) {
+          console.error('Error loading cached tire specs:', e);
+        }
       }
     }
   }
@@ -46,67 +76,51 @@ export class TireDataService {
   getTireSpecification(brand: string, model: string): Observable<TireSpecification | null> {
     const key = `${brand}-${model}`.toLowerCase();
     const cached = this.tireSpecsCache.value[key];
+    
     if (cached) {
       return of(cached);
     }
-    
-    return this.fetchTireSpec(brand, model);
+
+    // Return a default specification if no cache
+    return of(this.createDefaultSpec(brand, model));
   }
 
-  private fetchTireSpec(brand: string, model: string): Observable<TireSpecification | null> {
-    const query = `${brand} ${model}`.toLowerCase();
-    
-    return this.http.get<any>(`${this.GITHUB_API}/search?q=${query}`).pipe(
-      map(response => this.parseTireSpec(response)),
-      tap(spec => {
-        if (spec) {
-          const newCache = {
-            ...this.tireSpecsCache.value,
-            [`${brand}-${model}`.toLowerCase()]: spec
-          };
-          this.tireSpecsCache.next(newCache);
-          localStorage.setItem(this.CACHE_KEY, JSON.stringify(newCache));
-        }
-      }),
-      catchError(error => {
-        console.error('Error fetching tire spec:', error);
-        return of(null);
-      })
-    );
-  }
-
-  private parseTireSpec(rawData: any): TireSpecification | null {
-    try {
-      // Transform OpenTire data format to our format
-      return {
-        brand: rawData.brand,
-        model: rawData.model,
-        size: rawData.size,
-        type: rawData.type,
-        speedRating: rawData.speed_rating,
-        loadIndex: rawData.load_index,
-        rimDiameter: parseFloat(rawData.rim_diameter),
-        sectionWidth: parseFloat(rawData.section_width),
-        aspectRatio: parseFloat(rawData.aspect_ratio),
-        construction: rawData.construction,
-        maxLoad: parseFloat(rawData.max_load),
-        maxPressure: parseFloat(rawData.max_pressure),
-        treadDepth: parseFloat(rawData.tread_depth),
-        weight: parseFloat(rawData.weight)
-      };
-    } catch (e) {
-      console.error('Error parsing tire spec:', e);
-      return null;
+  private createDefaultSpec(brand: string, model: string): TireSpecification {
+    // Determine tire type from model name
+    let baseSpecs = this.defaultSpecs['all_season'];
+    if (model.toLowerCase().includes('winter') || model.toLowerCase().includes('snow')) {
+      baseSpecs = this.defaultSpecs['winter'];
+    } else if (model.toLowerCase().includes('sport') || model.toLowerCase().includes('summer')) {
+      baseSpecs = this.defaultSpecs['summer'];
     }
+
+    return {
+      brand,
+      model,
+      size: '225/45R17', // Default size
+      type: baseSpecs.type || 'All Season',
+      speedRating: baseSpecs.speedRating || 'H',
+      loadIndex: baseSpecs.loadIndex || '94',
+      rimDiameter: 17,
+      sectionWidth: 225,
+      aspectRatio: 45,
+      construction: baseSpecs.construction || 'Radial',
+      maxLoad: 1356,
+      maxPressure: 51,
+      treadDepth: 8.5,
+      weight: 11.2
+    };
   }
 
   searchTireSpecs(query: string): Observable<TireSpecification[]> {
-    return this.http.get<any>(`${this.GITHUB_API}/search?q=${query}`).pipe(
-      map(response => response.items.map((item: any) => this.parseTireSpec(item))),
-      catchError(error => {
-        console.error('Error searching tire specs:', error);
-        return of([]);
-      })
+    if (!query?.trim()) {
+      return of([]);
+    }
+
+    // Instead of making API calls, return matching default specs
+    return of(this.getPopularBrands()
+      .filter(brand => brand.toLowerCase().includes(query.toLowerCase()))
+      .map(brand => this.createDefaultSpec(brand, 'Standard Model'))
     );
   }
 

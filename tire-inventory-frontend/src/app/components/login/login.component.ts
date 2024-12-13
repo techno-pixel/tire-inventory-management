@@ -85,7 +85,6 @@ import { AuthService } from '../../services/auth.service';
 export class LoginComponent {
   loginForm: FormGroup;
   isLoading = false;
-  errorMessage: string = '';
 
   constructor(
     private fb: FormBuilder,
@@ -102,22 +101,17 @@ export class LoginComponent {
   onSubmit() {
     if (this.loginForm.valid) {
       this.isLoading = true;
-      const credentials = {
-        username: this.loginForm.value.username,
-        password: this.loginForm.value.password
-      };
-
-      this.authService.login(credentials).subscribe({
+      this.authService.login(this.loginForm.value).subscribe({
         next: () => {
           this.router.navigate(['/dashboard']);
         },
         error: (error) => {
           console.error('Login failed:', error);
-          this.errorMessage = error.error?.detail || 'Login failed. Please try again.';
-          this.snackBar.open(this.errorMessage, 'Close', {
-            duration: 5000,
-            panelClass: ['error-snackbar']
-          });
+          this.snackBar.open(
+            error.error?.detail || 'Login failed. Please try again.',
+            'Close',
+            { duration: 5000, panelClass: ['error-snackbar'] }
+          );
           this.isLoading = false;
         }
       });

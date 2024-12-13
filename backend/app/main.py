@@ -1,10 +1,9 @@
 import uvicorn
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from .routers import auth, inventory
+from .routers import auth, inventory, analytics  
 from .database import Base, engine
 from .config import get_settings
-from .routers import auth, inventory, sync, analytics, dummy_data
 
 settings = get_settings()
 
@@ -25,9 +24,7 @@ app.add_middleware(
 # Include routers
 app.include_router(auth.router, prefix="/api", tags=["auth"])
 app.include_router(inventory.router, prefix="/api/inventory", tags=["inventory"])
-app.include_router(sync.router, prefix="/api/sync", tags=["sync"])
 app.include_router(analytics.router, prefix="/api/analytics", tags=["analytics"])
-app.include_router(dummy_data.router, prefix="/api/dummy", tags=["dummy_data"])
 
 if __name__ == "__main__":
     uvicorn.run("main:app", host=settings.api_host, port=settings.api_port, reload=True)
