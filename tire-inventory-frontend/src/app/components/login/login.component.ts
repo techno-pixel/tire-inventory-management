@@ -1,4 +1,3 @@
-// components/login/login.component.ts
 import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
@@ -7,6 +6,7 @@ import { MatCardModule } from '@angular/material/card';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
+import { MatSnackBarModule, MatSnackBar } from '@angular/material/snack-bar';
 import { AuthService } from '../../services/auth.service';
 
 @Component({
@@ -19,6 +19,7 @@ import { AuthService } from '../../services/auth.service';
     MatFormFieldModule,
     MatInputModule,
     MatButtonModule,
+    MatSnackBarModule,
     RouterLink
   ],
   template: `
@@ -44,8 +45,10 @@ import { AuthService } from '../../services/auth.service';
             </mat-error>
           </mat-form-field>
 
-          <button mat-raised-button color="primary" type="submit" [disabled]="loginForm.invalid">
-            Login
+          <button mat-raised-button color="primary" 
+                  type="submit" 
+                  [disabled]="loginForm.invalid || isLoading">
+            {{ isLoading ? 'Logging in...' : 'Login' }}
           </button>
 
           <div class="register-link">
@@ -81,11 +84,14 @@ import { AuthService } from '../../services/auth.service';
 })
 export class LoginComponent {
   loginForm: FormGroup;
+  isLoading = false;
+  errorMessage: string = '';
 
   constructor(
     private fb: FormBuilder,
     private authService: AuthService,
-    private router: Router
+    private router: Router,
+    private snackBar: MatSnackBar
   ) {
     this.loginForm = this.fb.group({
       username: ['', Validators.required],
@@ -95,13 +101,24 @@ export class LoginComponent {
 
   onSubmit() {
     if (this.loginForm.valid) {
-      this.authService.login(this.loginForm.value).subscribe({
+      this.isLoading = true;
+      const credentials = {
+        username: this.loginForm.value.username,
+        password: this.loginForm.value.password
+      };
+
+      this.authService.login(credentials).subscribe({
         next: () => {
           this.router.navigate(['/dashboard']);
         },
         error: (error) => {
           console.error('Login failed:', error);
-          // Add error handling UI feedback here
+          this.errorMessage = error.error?.detail || 'Login failed. Please try again.';
+          this.snackBar.open(this.errorMessage, 'Close', {
+            duration: 5000,
+            panelClass: ['error-snackbar']
+          });
+          this.isLoading = false;
         }
       });
     }

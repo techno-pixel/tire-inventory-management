@@ -1,4 +1,3 @@
-// components/qr-generator/qr-generator.component.ts
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -8,12 +7,15 @@ import { MatInputModule } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
 import { MatSelectModule } from '@angular/material/select';
 import { MatIconModule } from '@angular/material/icon';
+import { MatSnackBarModule, MatSnackBar } from '@angular/material/snack-bar';
 import { InventoryItem } from '../../interfaces/inventory-item';
 import { InventoryService } from '../../services/inventory.service';
 import * as QRCode from 'qrcode';
 
 @Component({
   selector: 'app-qr-generator',
+  templateUrl: './qr-generator.component.html',
+  styleUrls: ['./qr-generator.component.scss'],
   standalone: true,
   imports: [
     CommonModule,
@@ -23,125 +25,85 @@ import * as QRCode from 'qrcode';
     MatInputModule,
     MatButtonModule,
     MatSelectModule,
-    MatIconModule
-  ],
-  template: `
-    <div class="qr-container">
-      <mat-card class="qr-card">
-        <mat-card-header>
-          <mat-card-title>Generate QR Code</mat-card-title>
-        </mat-card-header>
-        <mat-card-content>
-          <mat-form-field>
-            <mat-label>Select Item</mat-label>
-            <mat-select [(ngModel)]="selectedItem" (selectionChange)="generateQRCode()">
-              <mat-option *ngFor="let item of inventoryItems" [value]="item">
-                {{item.brand}} {{item.model}} - {{item.size}}
-              </mat-option>
-            </mat-select>
-          </mat-form-field>
-
-          <div class="qr-display" *ngIf="qrDataUrl">
-            <img [src]="qrDataUrl" alt="QR Code" class="qr-code">
-            <button mat-raised-button color="primary" (click)="downloadQR()">
-              <mat-icon>download</mat-icon>
-              Download QR Code
-            </button>
-          </div>
-        </mat-card-content>
-      </mat-card>
-
-      <mat-card class="scanner-card">
-        <mat-card-header>
-          <mat-card-title>Scan QR Code</mat-card-title>
-        </mat-card-header>
-        <mat-card-content>
-          <div class="scanner-placeholder">
-            <mat-icon>qr_code_scanner</mat-icon>
-            <p>QR Scanner Coming Soon</p>
-          </div>
-        </mat-card-content>
-      </mat-card>
-    </div>
-  `,
-  styles: [`
-    .qr-container {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
-      gap: 20px;
-      padding: 20px;
-    }
-    .qr-card, .scanner-card {
-      padding: 20px;
-    }
-    .qr-display {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 20px;
-      margin-top: 20px;
-    }
-    .qr-code {
-      width: 300px;
-      height: 300px;
-    }
-    mat-form-field {
-      width: 100%;
-    }
-    .scanner-placeholder {
-      height: 300px;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      border: 2px dashed #ccc;
-      margin-top: 20px;
-    }
-    .scanner-placeholder mat-icon {
-      font-size: 48px;
-      height: 48px;
-      width: 48px;
-      margin-bottom: 16px;
-    }
-  `]
+    MatIconModule,
+    MatSnackBarModule
+  ]
 })
 export class QrGeneratorComponent implements OnInit {
   selectedItem: InventoryItem | null = null;
   qrDataUrl: string = '';
   inventoryItems: InventoryItem[] = [];
 
-  constructor(private inventoryService: InventoryService) {}
+  constructor(
+    private inventoryService: InventoryService,
+    private snackBar: MatSnackBar
+  ) {}
 
   ngOnInit() {
+    this.loadInventoryData();
+  }
+
+  private loadInventoryData() {
     this.inventoryService.getItems().subscribe(
-      items => this.inventoryItems = items
+      items => this.inventoryItems = items,
+      error => this.showError('Error loading inventory items')
     );
   }
 
   async generateQRCode() {
-    if (this.selectedItem) {
+    if (!this.selectedItem) return;
+    
+    try {
       const data = JSON.stringify({
         id: this.selectedItem.id,
         sku: this.selectedItem.sku,
         brand: this.selectedItem.brand,
         model: this.selectedItem.model,
-        size: this.selectedItem.size
+        size: this.selectedItem.size,
+        timestamp: new Date().toISOString()
       });
-
-      try {
-        this.qrDataUrl = await QRCode.toDataURL(data);
-      } catch (err) {
-        console.error('Error generating QR code:', err);
-      }
+      
+      this.qrDataUrl = await QRCode.toDataURL(data, {
+        width: 300,
+        margin: 2,
+        color: {
+          dark: '#000000',
+          light: '#ffffff'
+        }
+      });
+    } catch (err) {
+      this.showError('Error generating QR code');
     }
   }
 
   downloadQR() {
-    if (this.qrDataUrl) {
-      const link = document.createElement('a');
-      link.download = `QR-${this.selectedItem?.sku || 'code'}.png`;
-      link.href = this.qrDataUrl;
-      link.click();
-    }
+    if (!this.qrDataUrl) return;
+    
+    const link = document.createElement('a');
+    link.download = `QR-${this.selectedItem?.sku || 'code'}.png`;
+    link.href = this.qrDataUrl;
+    link.click();
+  }
+
+  saveToSheets() {
+    if (!this.selectedItem) return;
+    this.showSuccess('Feature coming soon!');
+  }
+
+  private showSuccess(message: string) {
+    this.snackBar.open(message, 'Close', {
+      duration: 3000,
+      horizontalPosition: 'end',
+      verticalPosition: 'top'
+    });
+  }
+
+  private showError(message: string) {
+    this.snackBar.open(message, 'Close', {
+      duration: 5000,
+      horizontalPosition: 'end',
+      verticalPosition: 'top',
+      panelClass: ['error-snackbar']
+    });
   }
 }

@@ -1,4 +1,5 @@
 // components/inventory-list/inventory-list.component.ts
+import { InventoryDialogComponent } from '../inventory-dialog/inventory-dialog.component';
 import { Component, ViewChild, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatTableModule, MatTableDataSource } from '@angular/material/table';
@@ -172,9 +173,26 @@ export class InventoryListComponent implements OnInit {
   }
 
   addNewItem() {
-    // To be implemented with dialog
-    console.log('Add new item clicked');
+    const dialogRef = this.dialog.open(InventoryDialogComponent, {
+      width: '800px',
+      data: null
+    });
+  
+    dialogRef.afterClosed().subscribe(result => {
+      if (result) {
+        this.inventoryService.addItem(result).subscribe({
+          next: () => {
+            this.loadInventoryData();
+          },
+          error: (error) => {
+            console.error('Error adding item:', error);
+          }
+        });
+      }
+    });
   }
+
+
 
   editItem(item: InventoryItem) {
     // To be implemented with dialog

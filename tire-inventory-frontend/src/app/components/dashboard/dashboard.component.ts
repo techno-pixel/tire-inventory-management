@@ -1,18 +1,18 @@
-// components/dashboard/dashboard.component.ts
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatCardModule } from '@angular/material/card';
 import { MatGridListModule } from '@angular/material/grid-list';
 import { MatIconModule } from '@angular/material/icon';
+import { HttpClient } from '@angular/common/http';
 import { Chart } from 'chart.js/auto';
+import { AuthService } from '../../services/auth.service';
 
 @Component({
   selector: 'app-dashboard',
   standalone: true,
   imports: [CommonModule, MatCardModule, MatGridListModule, MatIconModule],
   template: `
-  <div class="dashboard-container">
-    <!-- Quick Stats -->
+  <div class="dashboard-container" *ngIf="loaded">
     <div class="stats-grid">
       <mat-card class="stat-card">
         <mat-card-content>
@@ -20,15 +20,28 @@ import { Chart } from 'chart.js/auto';
             <mat-icon color="primary">inventory_2</mat-icon>
             <div class="stat-details">
               <h3>Total Inventory</h3>
-              <p class="stat-number">{{totalInventory}}</p>
+              <p class="stat-number">{{metrics?.total_inventory}}</p>
             </div>
           </div>
         </mat-card-content>
       </mat-card>
-      <!-- Continue with other stat cards... -->
+
+      <mat-card class="stat-card">
+        <mat-card-content>
+          <div class="stat-content">
+            <mat-icon color="warn">warning</mat-icon>
+            <div class="stat-details">
+              <h3>Low Stock Items</h3>
+              <p class="stat-number">{{metrics?.low_stock_items}}</p>
+            </div>
+          </div>
+        </mat-card-content>
+      </mat-card>
     </div>
+    <!-- Add charts or more cards for seasonal distribution, supplier performance, disposal compliance as needed -->
+    <canvas id="inventoryChart"></canvas>
   </div>
-`,
+  `,
   styles: [`
     .dashboard-container {
       padding: 20px;
@@ -58,52 +71,38 @@ import { Chart } from 'chart.js/auto';
       font-weight: bold;
       color: #333;
     }
-    .charts-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
-      gap: 20px;
-    }
-    .chart-card {
-      min-height: 300px;
-    }
   `]
 })
 export class DashboardComponent implements OnInit {
-  totalInventory = 487;
-  lowStockItems = 12;
-  todaySales = 3245.00;
-  monthlyRevenue = 98750.00;
+  metrics: any;
+  loaded = false;
+
+  constructor(private http: HttpClient, private authService: AuthService) {}
 
   ngOnInit() {
-    this.initializeSalesChart();
-    this.initializeInventoryChart();
-    this.initializeTopItemsChart();
-  }
-
-  private initializeSalesChart() {
-    const ctx = document.getElementById('salesChart') as HTMLCanvasElement;
-    new Chart(ctx, {
-      type: 'line',
-      data: {
-        labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
-        datasets: [{
-          label: 'Sales ($)',
-          data: [65000, 72000, 68000, 85000, 89000, 98750],
-          borderColor: 'rgb(75, 192, 192)',
-          tension: 0.1
-        }]
-      }
-    });
+    // Fetch dashboard metrics
+    this.http.get<any>('http://localhost:8000/api/analytics/dashboard-metrics')
+      .subscribe({
+        next: (data) => {
+          this.metrics = data;
+          this.loaded = true;
+          this.initializeInventoryChart();
+        },
+        error: (err) => console.error(err)
+      });
   }
 
   private initializeInventoryChart() {
     const ctx = document.getElementById('inventoryChart') as HTMLCanvasElement;
+    const labels = Object.keys(this.metrics.seasonal_distribution);
+    const values = Object.values(this.metrics.seasonal_distribution);
+
     new Chart(ctx, {
       type: 'doughnut',
       data: {
-        labels: ['All Season', 'Winter', 'Summer', 'Performance'],
+        labels,
         datasets: [{
-          data: [45, 25, 20, 10],
+          data: values as number[],
           backgroundColor: [
             'rgb(54, 162, 235)',
             'rgb(255, 99, 132)',
@@ -115,18 +114,23 @@ export class DashboardComponent implements OnInit {
     });
   }
 
-  private initializeTopItemsChart() {
-    const ctx = document.getElementById('topItemsChart') as HTMLCanvasElement;
-    new Chart(ctx, {
-      type: 'bar',
-      data: {
-        labels: ['Michelin PS4', 'Bridgestone WS90', 'Continental DWS06', 'Pirelli P Zero'],
-        datasets: [{
-          label: 'Units Sold',
-          data: [124, 98, 86, 72],
-          backgroundColor: 'rgb(54, 162, 235)'
-        }]
-      }
-    });
+  generateDummyData() {
+    this.http.post('http://localhost:8000/api/dummy/generate-dummy-data', {}, {headers: {Authorization: 'Bearer ' + this.authService.getToken()}})
+      .subscribe({
+        next: () => this.loadMetrics(),
+        error: (err) => console.error(err)
+      });
   }
+  
+  private loadMetrics() {
+    this.http.get<any>('http://localhost:8000/api/analytics/dashboard-metrics')
+      .subscribe({
+        next: (data) => {
+          this.metrics = data;
+          this.loaded = true;
+          this.initializeInventoryChart();
+        },
+        error: (err) => console.error(err)
+      });
+    }
 }

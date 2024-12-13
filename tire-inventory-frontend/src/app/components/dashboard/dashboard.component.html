@@ -1,1 +1,9 @@
-<p>dashboard works!</p>
+<p>Welcome to your dashboard!</p>
+<div
+  *ngIf="loaded && metrics?.total_inventory === 0"
+  style="margin-bottom: 20px"
+>
+  <button mat-raised-button color="accent" (click)="generateDummyData()">
+    Generate Sample Data
+  </button>
+</div>

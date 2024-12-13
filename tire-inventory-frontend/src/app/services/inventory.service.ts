@@ -1,7 +1,8 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable, of } from 'rxjs';
+import { catchError, Observable, of } from 'rxjs';
 import { InventoryItem } from '../interfaces/inventory-item';
+import { environment } from '../../environments/environment'; // Import environment
 
 @Injectable({
   providedIn: 'root'
@@ -56,54 +57,55 @@ export class InventoryService {
   constructor(private http: HttpClient) { }
 
   getItems(): Observable<InventoryItem[]> {
-    // For initial testing, return mock data
-    return of(this.mockInventory);
-    
-    // When backend is ready, use this:
-    // return this.http.get<InventoryItem[]>(this.apiUrl);
+    return this.http.get<InventoryItem[]>(this.apiUrl).pipe(
+      catchError(err => {
+        console.warn('API unavailable, returning mock data');
+        return of(this.mockInventory);
+      })
+    );
   }
 
   getItem(id: number): Observable<InventoryItem> {
     // For testing
-    const item = this.mockInventory.find(i => i.id === id);
-    return of(item!);
+    // const item = this.mockInventory.find(i => i.id === id);
+    // return of(item!);
     
     // When backend is ready:
-    // return this.http.get<InventoryItem>(`${this.apiUrl}/${id}`);
+    return this.http.get<InventoryItem>(`${this.apiUrl}/${id}`);
   }
 
   addItem(item: InventoryItem): Observable<InventoryItem> {
-    // For testing
-    const newItem = { ...item, id: this.mockInventory.length + 1 };
-    this.mockInventory.push(newItem);
-    return of(newItem);
-    
-    // When backend is ready:
-    // return this.http.post<InventoryItem>(this.apiUrl, item);
+    return this.http.post<InventoryItem>(this.apiUrl, item).pipe(
+      catchError((error) => {
+        console.error('Error adding item:', error);
+        return of(error);
+      })
+    );
   }
 
   updateItem(id: number, item: InventoryItem): Observable<InventoryItem> {
     // For testing
-    const index = this.mockInventory.findIndex(i => i.id === id);
-    if (index !== -1) {
-      this.mockInventory[index] = { ...item, id };
-      return of(this.mockInventory[index]);
-    }
-    return of(item);
+    // const index = this.mockInventory.findIndex(i => i.id === id);
+    // if (index !== -1) {
+    //   this.mockInventory[index] = { ...item, id };
+    //   return of(this.mockInventory[index]);
+    // }
+    // return of(item);
     
     // When backend is ready:
-    // return this.http.put<InventoryItem>(`${this.apiUrl}/${id}`, item);
+    return this.http.put<InventoryItem>(`${this.apiUrl}/${id}`, item);
   }
 
   deleteItem(id: number): Observable<void> {
     // For testing
-    const index = this.mockInventory.findIndex(i => i.id === id);
-    if (index !== -1) {
-      this.mockInventory.splice(index, 1);
-    }
-    return of(void 0);
+    // const index = this.mockInventory.findIndex(i => i.id === id);
+    // if (index !== -1) {
+    //   this.mockInventory.splice(index, 1);
+    // }
+    // return of(void 0);
     
     // When backend is ready:
-    // return this.http.delete<void>(`${this.apiUrl}/${id}`);
+    return this.http.delete<void>(`${this.apiUrl}/${id}`);
   }
 }
+
