@@ -3,8 +3,8 @@ export interface InventoryItem {
   sku: string;
   brand: string;
   model: string;
-  size: string;  // e.g., "225/45R17"
-  type: string;  // e.g., "All Season", "Winter", "Summer"
+  size: string;
+  type: string;
   quantity: number;
   price: number;
   cost: number;
@@ -13,10 +13,12 @@ export interface InventoryItem {
   season: string;
   speedRating: string;
   loadIndex: string;
-  dot: string;  // DOT code
+  dot?: string;
   imageUrl?: string;
   notes?: string;
   lastUpdated?: Date;
   warrantyMonths?: number;
   manufactureDate?: Date;
+  treadDepth?: number; // Example of new field
+  weight?: number; // Example of new field
 }

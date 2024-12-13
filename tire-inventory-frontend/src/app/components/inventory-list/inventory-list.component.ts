@@ -14,6 +14,7 @@ import { FormsModule } from '@angular/forms';
 import { InventoryItem } from '../../interfaces/inventory-item';
 import { InventoryService } from '../../services/inventory.service';
 import { Router } from '@angular/router';
+import { MatSnackBar } from '@angular/material/snack-bar';
 
 @Component({
   selector: 'app-inventory-list',
@@ -28,61 +29,98 @@ import { Router } from '@angular/router';
     MatButtonModule,
     MatIconModule,
     MatDialogModule,
-    FormsModule
+    FormsModule,
   ],
   template: `
     <div class="inventory-container">
       <div class="search-bar">
         <mat-form-field>
           <mat-label>Search Inventory</mat-label>
-          <input matInput (keyup)="applyFilter($event)" placeholder="Search by brand, model, size...">
+          <input
+            matInput
+            (keyup)="applyFilter($event)"
+            placeholder="Search by brand, model, size..."
+          />
           <mat-icon matPrefix>search</mat-icon>
         </mat-form-field>
-        
+
         <button mat-raised-button color="primary" (click)="addNewItem()">
           <mat-icon>add</mat-icon>
           Add Item
         </button>
       </div>
 
-      <table mat-table [dataSource]="dataSource" matSort class="inventory-table">
+      <table
+        mat-table
+        [dataSource]="dataSource"
+        matSort
+        class="inventory-table"
+      >
         <!-- Image Column -->
         <ng-container matColumnDef="image">
-          <th mat-header-cell *matHeaderCellDef> Image </th>
+          <th mat-header-cell *matHeaderCellDef>Image</th>
           <td mat-cell *matCellDef="let item">
-            <img [src]="item.imageUrl || 'assets/placeholder-tire.png'" alt="Tire image" class="tire-image">
+            <img
+              [src]="item.imageUrl || 'assets/placeholder-tire.png'"
+              alt="Tire image"
+              class="tire-image"
+            />
           </td>
         </ng-container>
 
         <!-- Brand Column -->
         <ng-container matColumnDef="brand">
-          <th mat-header-cell *matHeaderCellDef mat-sort-header> Brand </th>
-          <td mat-cell *matCellDef="let item">{{item.brand}}</td>
+          <th mat-header-cell *matHeaderCellDef mat-sort-header>Brand</th>
+          <td mat-cell *matCellDef="let item">{{ item.brand }}</td>
         </ng-container>
 
         <!-- Model Column -->
         <ng-container matColumnDef="model">
-          <th mat-header-cell *matHeaderCellDef mat-sort-header> Model </th>
-          <td mat-cell *matCellDef="let item">{{item.model}}</td>
+          <th mat-header-cell *matHeaderCellDef mat-sort-header>Model</th>
+          <td mat-cell *matCellDef="let item">{{ item.model }}</td>
         </ng-container>
 
         <!-- Size Column -->
         <ng-container matColumnDef="size">
-          <th mat-header-cell *matHeaderCellDef mat-sort-header> Size </th>
-          <td mat-cell *matCellDef="let item">{{item.size}}</td>
+          <th mat-header-cell *matHeaderCellDef mat-sort-header>Size</th>
+          <td mat-cell *matCellDef="let item">{{ item.size }}</td>
+        </ng-container>
+
+        <!-- Type Column -->
+        <ng-container matColumnDef="type">
+          <th mat-header-cell *matHeaderCellDef mat-sort-header>Type</th>
+          <td mat-cell *matCellDef="let item">{{ item.type }}</td>
+        </ng-container>
+
+        <!-- Speed Rating Column -->
+        <ng-container matColumnDef="speedRating">
+          <th mat-header-cell *matHeaderCellDef mat-sort-header>
+            Speed Rating
+          </th>
+          <td mat-cell *matCellDef="let item">{{ item.speedRating }}</td>
+        </ng-container>
+
+        <!-- Load Index Column -->
+        <ng-container matColumnDef="loadIndex">
+          <th mat-header-cell *matHeaderCellDef mat-sort-header>Load Index</th>
+          <td mat-cell *matCellDef="let item">{{ item.loadIndex }}</td>
         </ng-container>
 
         <!-- Quantity Column -->
         <ng-container matColumnDef="quantity">
-          <th mat-header-cell *matHeaderCellDef mat-sort-header> Quantity </th>
-          <td mat-cell *matCellDef="let item" [ngClass]="{'low-stock': item.quantity < item.minimumStock}">
-            {{item.quantity}}
+          <th mat-header-cell *matHeaderCellDef mat-sort-header>Quantity</th>
+          <td
+            mat-cell
+            *matCellDef="let item"
+            [ngClass]="{ 'low-stock': item.quantity < item.minimumStock }"
+          >
+            {{ item.quantity }}
           </td>
         </ng-container>
 
         <!-- Actions Column -->
         <ng-container matColumnDef="actions">
-          <th mat-header-cell *matHeaderCellDef> Actions </th>
+          <th mat-header-cell *matHeaderCellDef>Actions</th>
           <td mat-cell *matCellDef="let item">
             <button mat-icon-button color="primary" (click)="editItem(item)">
               <mat-icon>edit</mat-icon>
@@ -97,55 +135,68 @@ import { Router } from '@angular/router';
         </ng-container>
 
         <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
-        <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
+        <tr mat-row *matRowDef="let row; columns: displayedColumns"></tr>
       </table>
 
       <mat-paginator [pageSizeOptions]="[10, 25, 50, 100]" showFirstLastButtons>
       </mat-paginator>
     </div>
   `,
-  styles: [`
-    .inventory-container {
-      padding: 20px;
-    }
-    .search-bar {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 20px;
-    }
-    .search-bar mat-form-field {
-      width: 50%;
-    }
-    .inventory-table {
-      width: 100%;
-    }
-    .tire-image {
-      width: 50px;
-      height: 50px;
-      object-fit: cover;
-      border-radius: 4px;
-    }
-    .low-stock {
-      color: #f44336;
-      font-weight: bold;
-    }
-    .mat-column-actions {
-      width: 120px;
-      text-align: center;
-    }
-  `]
+  styles: [
+    `
+      .inventory-container {
+        padding: 20px;
+      }
+      .search-bar {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+      }
+      .search-bar mat-form-field {
+        width: 50%;
+      }
+      .inventory-table {
+        width: 100%;
+      }
+      .tire-image {
+        width: 50px;
+        height: 50px;
+        object-fit: cover;
+        border-radius: 4px;
+      }
+      .low-stock {
+        color: #f44336;
+        font-weight: bold;
+      }
+      .mat-column-actions {
+        width: 120px;
+        text-align: center;
+      }
+    `,
+  ],
 })
 export class InventoryListComponent implements OnInit {
-  displayedColumns: string[] = ['image', 'brand', 'model', 'size', 'quantity', 'actions'];
+  displayedColumns: string[] = [
+    'image',
+    'brand',
+    'model',
+    'size',
+    'type',
+    'speedRating',
+    'loadIndex',
+    'quantity',
+    'actions',
+  ];
   dataSource: MatTableDataSource<InventoryItem>;
-  
+
   @ViewChild(MatPaginator) paginator!: MatPaginator;
   @ViewChild(MatSort) sort!: MatSort;
 
   constructor(
     private inventoryService: InventoryService,
     private dialog: MatDialog,
+    private snackBar: MatSnackBar,
     private router: Router
   ) {
     this.dataSource = new MatTableDataSource<InventoryItem>([]);
@@ -156,7 +207,7 @@ export class InventoryListComponent implements OnInit {
   }
 
   loadInventoryData() {
-    this.inventoryService.getItems().subscribe(items => {
+    this.inventoryService.getItems().subscribe((items) => {
       this.dataSource = new MatTableDataSource(items);
       this.dataSource.paginator = this.paginator;
       this.dataSource.sort = this.sort;
@@ -175,24 +226,34 @@ export class InventoryListComponent implements OnInit {
   addNewItem() {
     const dialogRef = this.dialog.open(InventoryDialogComponent, {
       width: '800px',
-      data: null
+      data: null,
     });
-  
-    dialogRef.afterClosed().subscribe(result => {
+
+    dialogRef.afterClosed().subscribe((result) => {
       if (result) {
         this.inventoryService.addItem(result).subscribe({
           next: () => {
+            this.snackBar.open('Item added successfully', 'Close', {
+              duration: 3000,
+            });
             this.loadInventoryData();
           },
           error: (error) => {
-            console.error('Error adding item:', error);
-          }
+            let errorMessage = 'Failed to add item';
+            if (error.error?.detail) {
+              errorMessage = Array.isArray(error.error.detail)
+                ? error.error.detail[0]
+                : error.error.detail;
+            }
+            this.snackBar.open(errorMessage, 'Close', {
+              duration: 5000,
+              panelClass: ['error-snackbar'],
+            });
+          },
         });
       }
     });
   }
-
-
 
   editItem(item: InventoryItem) {
     // To be implemented with dialog
@@ -207,7 +268,7 @@ export class InventoryListComponent implements OnInit {
         },
         error: (error) => {
           console.error('Error deleting item:', error);
-        }
+        },
       });
     }
   }

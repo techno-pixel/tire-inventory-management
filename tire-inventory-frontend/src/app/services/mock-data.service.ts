@@ -25,7 +25,9 @@ export class MockDataService {
       dot: "1221",
       imageUrl: "assets/images/michelin-ps4.jpg",
       warrantyMonths: 72,
-      manufactureDate: new Date("2023-12-01")
+      manufactureDate: new Date("2023-12-01"),
+      treadDepth: 8.5,
+      weight: 10.2
     },
     {
       id: 2,
@@ -45,30 +47,12 @@ export class MockDataService {
       dot: "1123",
       imageUrl: "assets/images/bridgestone-ws90.jpg",
       warrantyMonths: 36,
-      manufactureDate: new Date("2023-11-15")
+      manufactureDate: new Date("2023-11-15"),
+      treadDepth: 9.0,
+      weight: 11.5
     },
-    {
-      id: 3,
-      sku: "CONT-DWS06-24540R19",
-      brand: "Continental",
-      model: "ExtremeContact DWS06 Plus",
-      size: "245/40R19",
-      type: "All Season",
-      quantity: 4,
-      price: 209.99,
-      cost: 160.00,
-      location: "C3",
-      minimumStock: 4,
-      season: "All Season",
-      speedRating: "Y",
-      loadIndex: "98",
-      dot: "1224",
-      imageUrl: "assets/images/continental-dws06.jpg",
-      warrantyMonths: 60,
-      manufactureDate: new Date("2023-12-15")
-    },
-    // Add more mock data...
   ];
+  
 
   getMockInventory(): InventoryItem[] {
     return this.mockInventory;
