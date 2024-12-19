@@ -30,7 +30,8 @@ async def verify_token(token: str) -> Optional[TokenData]:
         payload = jwt.decode(token, settings.secret_key, algorithms=[settings.algorithm])
         username: str = payload.get("sub")
         if username is None:
-            return None
+            raise JWTError("Token missing 'sub'")
         return TokenData(username=username)
-    except JWTError:
+    except JWTError as e:
+        print(f"Token verification failed: {str(e)}")  # Log error for debugging
         return None

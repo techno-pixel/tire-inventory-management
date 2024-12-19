@@ -12,6 +12,24 @@ settings = get_settings()
 router = APIRouter()
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
 
+# @router.post("/register", response_model=User)
+# async def register(user: UserCreate, db: Session = Depends(get_db)):
+#     db_user = get_user_by_email(db, email=user.email)
+#     if db_user:
+#         raise HTTPException(
+#             status_code=400,
+#             detail="Email already registered"
+#         )
+    
+#     db_user = get_user_by_username(db, username=user.username)
+#     if db_user:
+#         raise HTTPException(
+#             status_code=400,
+#             detail="Username already registered"
+#         )
+    
+#     return create_user(db=db, user=user)
+
 @router.post("/register", response_model=User)
 async def register(user: UserCreate, db: Session = Depends(get_db)):
     db_user = get_user_by_email(db, email=user.email)
@@ -28,7 +46,16 @@ async def register(user: UserCreate, db: Session = Depends(get_db)):
             detail="Username already registered"
         )
     
-    return create_user(db=db, user=user)
+    # Create user
+    created_user = create_user(db=db, user=user)
+
+    # Issue token
+    access_token_expires = timedelta(minutes=settings.access_token_expire_minutes)
+    access_token = create_access_token(
+        data={"sub": created_user.username}, expires_delta=access_token_expires
+    )
+
+    return {"user": created_user, "token": access_token}
 
 @router.post("/login")
 async def login(

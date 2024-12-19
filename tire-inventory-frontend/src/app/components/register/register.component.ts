@@ -96,18 +96,37 @@ export class RegisterComponent {
       password: ['', [Validators.required, Validators.minLength(6)]]
     });
   }
-
   onSubmit() {
     if (this.registerForm.valid) {
       this.authService.register(this.registerForm.value).subscribe({
-        next: () => {
+        next: (response: any) => {
+          // Save the token and user data
+          localStorage.setItem('token', response.token);
+          localStorage.setItem('currentUser', JSON.stringify(response.user));
+  
+          // Redirect to the dashboard
           this.router.navigate(['/dashboard']);
         },
         error: (error) => {
           console.error('Registration failed:', error);
-          // Handle error (you might want to show an error message to the user)
+          // Show error message
         }
       });
     }
   }
 }
+
+//   onSubmit() {
+//     if (this.registerForm.valid) {
+//       this.authService.register(this.registerForm.value).subscribe({
+//         next: () => {
+//           this.router.navigate(['/dashboard']);
+//         },
+//         error: (error) => {
+//           console.error('Registration failed:', error);
+//           // Handle error (you might want to show an error message to the user)
+//         }
+//       });
+//     }
+//   }
+// }

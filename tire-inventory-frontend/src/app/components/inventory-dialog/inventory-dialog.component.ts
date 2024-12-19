@@ -210,7 +210,6 @@ export class InventoryDialogComponent implements OnInit {
       loadIndex: ['', [Validators.required, Validators.pattern(/^\d{2,3}$/)]],
       quantity: [0, [Validators.required, Validators.min(0)]],
       price: [0, [Validators.required, Validators.min(0)]],
-      cost: [0, [Validators.required, Validators.min(0)]],
       location: ['', Validators.required],
       minimumStock: [5, [Validators.required, Validators.min(0)]],
       season: ['All Season', Validators.required],
@@ -221,6 +220,8 @@ export class InventoryDialogComponent implements OnInit {
       warrantyMonths: [0, [Validators.min(0)]],
     });
   }
+
+
 
   private updateSpecifications() {
     const brand = this.itemForm.get('brand')?.value;
@@ -248,12 +249,47 @@ export class InventoryDialogComponent implements OnInit {
     this.dialogRef.close();
   }
 
+  // onSave(): void {
+  //   console.log('Form validity:', this.itemForm.valid);
+  //   console.log('Form values:', this.itemForm.value);
+  //   console.log('Form errors:', this.itemForm.errors);
+
+  //   // Log individual control validation states
+  //   Object.keys(this.itemForm.controls).forEach((key) => {
+  //     const control = this.itemForm.get(key);
+  //     console.log(`${key} validity:`, {
+  //       valid: control?.valid,
+  //       errors: control?.errors,
+  //       value: control?.value,
+  //     });
+  //   });
+
+  //   if (this.itemForm.valid) {
+  //     const formValue = this.itemForm.value;
+
+  //     // Generate SKU
+  //     const sku = `${formValue.brand
+  //       .substring(0, 4)
+  //       .toUpperCase()}-${formValue.model
+  //       .substring(0, 4)
+  //       .toUpperCase()}-${formValue.size.replace('/', '').replace('R', '')}`;
+
+  //     const item: InventoryItem = {
+  //       ...formValue,
+  //       sku,
+  //       lastUpdated: new Date(),
+  //       id: this.data?.id,
+  //     };
+
+  //     console.log('Saving item:', item);
+  //     this.dialogRef.close(item);
+  //   }
+  // }
+
   onSave(): void {
     console.log('Form validity:', this.itemForm.valid);
     console.log('Form values:', this.itemForm.value);
-    console.log('Form errors:', this.itemForm.errors);
-
-    // Log individual control validation states
+  
     Object.keys(this.itemForm.controls).forEach((key) => {
       const control = this.itemForm.get(key);
       console.log(`${key} validity:`, {
@@ -262,26 +298,17 @@ export class InventoryDialogComponent implements OnInit {
         value: control?.value,
       });
     });
-
+  
     if (this.itemForm.valid) {
       const formValue = this.itemForm.value;
-
-      // Generate SKU
       const sku = `${formValue.brand
-        .substring(0, 4)
+        ?.substring(0, 4)
         .toUpperCase()}-${formValue.model
-        .substring(0, 4)
+        ?.substring(0, 4)
         .toUpperCase()}-${formValue.size.replace('/', '').replace('R', '')}`;
-
-      const item: InventoryItem = {
-        ...formValue,
-        sku,
-        lastUpdated: new Date(),
-        id: this.data?.id,
-      };
-
-      console.log('Saving item:', item);
+      const item: InventoryItem = { ...formValue, sku, lastUpdated: new Date() };
       this.dialogRef.close(item);
     }
   }
+  
 }

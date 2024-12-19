@@ -73,42 +73,70 @@ export class TireDataService {
     }
   }
 
+  // getTireSpecification(brand: string, model: string): Observable<TireSpecification | null> {
+  //   const key = `${brand}-${model}`.toLowerCase();
+  //   const cached = this.tireSpecsCache.value[key];
+    
+  //   if (cached) {
+  //     return of(cached);
+  //   }
+
+  //   // Return a default specification if no cache
+  //   return of(this.createDefaultSpec(brand, model));
+  // }
+
+  // private createDefaultSpec(brand: string, model: string): TireSpecification {
+  //   // Determine tire type from model name
+  //   let baseSpecs = this.defaultSpecs['all_season'];
+  //   if (model.toLowerCase().includes('winter') || model.toLowerCase().includes('snow')) {
+  //     baseSpecs = this.defaultSpecs['winter'];
+  //   } else if (model.toLowerCase().includes('sport') || model.toLowerCase().includes('summer')) {
+  //     baseSpecs = this.defaultSpecs['summer'];
+  //   }
+
+  //   return {
+  //     brand,
+  //     model,
+  //     size: '225/45R17', // Default size
+  //     type: baseSpecs.type || 'All Season',
+  //     speedRating: baseSpecs.speedRating || 'H',
+  //     loadIndex: baseSpecs.loadIndex || '94',
+  //     rimDiameter: 17,
+  //     sectionWidth: 225,
+  //     aspectRatio: 45,
+  //     construction: baseSpecs.construction || 'Radial',
+  //     maxLoad: 1356,
+  //     maxPressure: 51,
+  //     treadDepth: 8.5,
+  //     weight: 11.2
+  //   };
+  // }
+
   getTireSpecification(brand: string, model: string): Observable<TireSpecification | null> {
     const key = `${brand}-${model}`.toLowerCase();
     const cached = this.tireSpecsCache.value[key];
-    
     if (cached) {
       return of(cached);
     }
-
-    // Return a default specification if no cache
     return of(this.createDefaultSpec(brand, model));
   }
 
-  private createDefaultSpec(brand: string, model: string): TireSpecification {
-    // Determine tire type from model name
-    let baseSpecs = this.defaultSpecs['all_season'];
-    if (model.toLowerCase().includes('winter') || model.toLowerCase().includes('snow')) {
-      baseSpecs = this.defaultSpecs['winter'];
-    } else if (model.toLowerCase().includes('sport') || model.toLowerCase().includes('summer')) {
-      baseSpecs = this.defaultSpecs['summer'];
-    }
-
+private createDefaultSpec(brand: string, model: string): TireSpecification {
     return {
       brand,
       model,
-      size: '225/45R17', // Default size
-      type: baseSpecs.type || 'All Season',
-      speedRating: baseSpecs.speedRating || 'H',
-      loadIndex: baseSpecs.loadIndex || '94',
+      size: '225/45R17',
+      type: 'All Season',
+      speedRating: 'H',
+      loadIndex: '94',
       rimDiameter: 17,
       sectionWidth: 225,
       aspectRatio: 45,
-      construction: baseSpecs.construction || 'Radial',
+      construction: 'Radial',
       maxLoad: 1356,
       maxPressure: 51,
       treadDepth: 8.5,
-      weight: 11.2
+      weight: 11.2,
     };
   }
 

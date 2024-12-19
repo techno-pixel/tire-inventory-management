@@ -3,7 +3,7 @@ from functools import lru_cache
 
 class Settings(BaseSettings):
     # Existing settings
-    database_url: str = "postgresql://postgres:password@localhost:5432/tire_inventory"
+    database_url: str = "postgresql://postgres:rty456fgh@localhost:5432/tire_inventory"
     secret_key: str = "your-secret-key-here" # for prod
     algorithm: str = "HS256"
     access_token_expire_minutes: int = 30
